@@ -118,6 +118,7 @@ jobs:
       # Create Releases
       - name: Create Tag
         run: |
+          gh auth setup-git
           git tag ${TAG}
           git push origin ${TAG}
         env:
