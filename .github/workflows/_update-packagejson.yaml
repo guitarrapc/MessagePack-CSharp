@@ -168,12 +168,13 @@ jobs:
 
         env:
           TAG: ${{ inputs.tag }}
-      - name: Push changes
+      - name: Push changes to triggered branch
         if: ${{ !inputs.dry-run && steps.check_update.outputs.changed == '1' }}
         uses: ad-m/github-push-action@881a6320fdb16eb5318c5054f31c218aec2b324c # v1.3.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }} # auto generated token
           tags: ${{ inputs.push-tag }}
+          branch: ${{ github.ref_name }}
 
       - name: Push changes (dry-run)
         if: ${{ inputs.dry-run && steps.check_update.outputs.changed == '1' }}
