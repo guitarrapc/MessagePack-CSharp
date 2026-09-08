@@ -145,31 +145,31 @@ jobs:
           done <<< "${{ inputs.release-asset-path }}"
         if: ${{ inputs.release-upload }}
 
-      - name: NuGet login (OIDC)
-        id: nuget-login
-        if: ${{ inputs.nuget-push }}
-        uses: NuGet/login@v1
-        with:
-          user: ${{ secrets.NUGET_USER }}
+      # - name: NuGet login (OIDC)
+      #   id: nuget-login
+      #   if: ${{ inputs.nuget-push }}
+      #   uses: NuGet/login@v1
+      #   with:
+      #     user: ${{ secrets.NUGET_USER }}
 
-      # Upload to NuGet
-      - name: Upload to NuGet (DryRun=${{ inputs.dry-run }})
-        if: ${{ inputs.nuget-push }}
-        run: |
-          while read -r nuget_path; do
-            if [[ "$nuget_path" == "" ]]; then continue; fi
-            # shellcheck disable=SC2086
-            if ! ls -l ${nuget_path} >/dev/null 2>&1;then
-              echo "skipping nuget push, $nuget_path not found."
-              continue
-            fi
+      #   # Upload to NuGet
+      #   - name: Upload to NuGet (DryRun=${{ inputs.dry-run }})
+      #     if: ${{ inputs.nuget-push }}
+      #     run: |
+      #       while read -r nuget_path; do
+      #         if [[ "$nuget_path" == "" ]]; then continue; fi
+      #         # shellcheck disable=SC2086
+      #         if ! ls -l ${nuget_path} >/dev/null 2>&1;then
+      #           echo "skipping nuget push, $nuget_path not found."
+      #           continue
+      #         fi
 
-            if [[ "${{ inputs.dry-run }}" == "true" ]]; then
-              echo "(dry run) dotnet nuget push \"${nuget_path}\" --skip-duplicate -s https://api.nuget.org/v3/index.json -k \"***\""
-            else
-              dotnet nuget push "${nuget_path}" --skip-duplicate -s https://api.nuget.org/v3/index.json -k "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
-            fi
-          done <<< "${{ inputs.nuget-path }}"
+      #         if [[ "${{ inputs.dry-run }}" == "true" ]]; then
+      #           echo "(dry run) dotnet nuget push \"${nuget_path}\" --skip-duplicate -s https://api.nuget.org/v3/index.json -k \"***\""
+      #         else
+      #           dotnet nuget push "${nuget_path}" --skip-duplicate -s https://api.nuget.org/v3/index.json -k "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+      #         fi
+      #       done <<< "${{ inputs.nuget-path }}"
 
       # Clean up
       - name: Clean up. Wait 60s and delete release if dry-run or failure. (dry-run=${{ inputs.dry-run }}})
