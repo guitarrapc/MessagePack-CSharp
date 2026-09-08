@@ -1,76 +1,85 @@
 name: Run release build and publish to NuGet
 
 on:
-    workflow_dispatch:
-        inputs:
-            tag:
-                description: "tag: git tag you want create. (sample v1.0.0)"
-                required: true
-            dry-run:
-                description: "dry-run: false = create release/nuget. true = never create release/nuget."
-                required: true
-                default: false
-                type: boolean
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "tag: git tag you want create. (sample v1.0.0)"
+        required: true
+      dry-run:
+        description: "dry-run: false = create release/nuget. true = never create release/nuget."
+        required: true
+        default: false
+        type: boolean
 
 permissions:
-    actions: write
-    contents: write
-    id-token: write
+  actions: write
+  contents: write
+  id-token: write
 
 jobs:
-    # for unity. need update package.json from tag
-    update-packagejson:
-        uses: ./.github/workflows/_update-packagejson.yaml
-        with:
-            file-path: |
-                ./src/MessagePack.Unity/package.json
-            tag: ${{ inputs.tag }}
-            dry-run: ${{ inputs.dry-run }}
-            push-tag: true
+  # for unity. need update package.json from tag
+  update-packagejson:
+    uses: ./.github/workflows/_update-packagejson.yaml
+    permissions:
+      contents: write
+    with:
+      file-path: |
+        ./src/MessagePack.Unity/package.json
+      tag: ${{ inputs.tag }}
+      dry-run: ${{ inputs.dry-run }}
+      push-tag: true
 
-    # for dotnet. Build nuget package
-    build-dotnet:
-        needs: [update-packagejson]
-        runs-on: ubuntu-latest
-        timeout-minutes: 10
-        steps:
-            - run: echo ${{ needs.update-packagejson.outputs.sha }}
-            - uses: actions/checkout@v5
-              with:
-                  ref: ${{ needs.update-packagejson.outputs.sha }}
-                  fetch-depth: 0
-            - uses: ./.github/actions/setup-dotnet
-            # pack nuget
-            - run: dotnet build -c Release -p:Version=${{ needs.update-packagejson.outputs.normalized_tag }}
-            - run: dotnet test -c Release --no-build
-            - run: dotnet pack -c Release -p:Version=${{ needs.update-packagejson.outputs.normalized_tag }} -o ./publish
-            - name: upload artifacts
-              uses: actions/upload-artifact@v7 # must sync with actions/download-artifact@v8 in create-release
-              with:
-                  name: nuget
-                  path: ./publish/
-                  if-no-files-found: "error" # default 'warn'
-                  retention-days: 1 # expire in 1 day
-
-    # create release and upload nuget
-    create-release:
-        needs: [update-packagejson, build-dotnet]
-        uses: ./.github/workflows/_create-release.yaml
+  # for dotnet. Build nuget package
+  build-dotnet:
+    needs: [update-packagejson]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    steps:
+      - run: echo ${{ needs.update-packagejson.outputs.sha }}
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-            commit-id: ${{ needs.update-packagejson.outputs.sha }}
-            dry-run: ${{ inputs.dry-run }}
-            nuget-push: true
-            release-upload: true
-            release-asset-path: |
-                ./nuget/*.nupkg
-                ./nuget/*.snupkg
-            tag: ${{ inputs.tag }}
-        secrets: inherit
-
-    # delete dry-run created git branch
-    cleanup:
-        if: ${{ needs.update-packagejson.outputs.is-branch-created == 'true' }}
-        needs: [update-packagejson, create-release]
-        uses: ./.github/workflows/_clean-packagejson-branch.yaml
+          persist-credentials: false
+          ref: ${{ needs.update-packagejson.outputs.sha }}
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-dotnet
+      # pack nuget
+      - run: dotnet build -c Release -p:Version=${{ needs.update-packagejson.outputs.normalized_tag }}
+      - run: dotnet test -c Release --no-build
+      - run: dotnet pack -c Release -p:Version=${{ needs.update-packagejson.outputs.normalized_tag }} -o ./publish
+      - name: upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1 # must sync with actions/download-artifact@v8 in create-release
         with:
-            branch: ${{ needs.update-packagejson.outputs.branch-name }}
+          name: nuget
+          path: ./publish/
+          if-no-files-found: "error" # default 'warn'
+          retention-days: 1 # expire in 1 day
+
+  # create release and upload nuget
+  create-release:
+    needs: [update-packagejson, build-dotnet]
+    uses: ./.github/workflows/_create-release.yaml
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      commit-id: ${{ needs.update-packagejson.outputs.sha }}
+      dry-run: ${{ inputs.dry-run }}
+      nuget-push: true
+      release-upload: true
+      release-asset-path: |
+        ./nuget/*.nupkg
+        ./nuget/*.snupkg
+      tag: ${{ inputs.tag }}
+    secrets: inherit
+
+  # delete dry-run created git branch
+  cleanup:
+    if: ${{ needs.update-packagejson.outputs.is-branch-created == 'true' }}
+    needs: [update-packagejson, create-release]
+    uses: ./.github/workflows/_clean-packagejson-branch.yaml
+    permissions: {}
+    with:
+      branch: ${{ needs.update-packagejson.outputs.branch-name }}

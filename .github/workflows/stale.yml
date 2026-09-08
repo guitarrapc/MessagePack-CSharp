@@ -2,25 +2,26 @@ name: Mark stale issues and pull requests
 
 on:
   schedule:
-  - cron: "0 0 * * *"
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 jobs:
   stale:
-
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+      pull-requests: write
+    timeout-minutes: 5
     steps:
-    - uses: actions/stale@v5.2.0
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        days-before-stale: 90
-        days-before-close: 5
-        stale-issue-message: 'This issue is stale because it has been open 90 days with no activity. Remove stale label or comment or this will be closed in 5 days.'
-        stale-issue-label: 'no-issue-activity'
-        exempt-issue-labels: awaiting-approval
-        stale-pr-message: 'This pull request is stale because it has been open 90 days with no activity. Remove stale label or comment or this will be closed in 5 days.'
-        stale-pr-label: 'no-pr-activity'
-        exempt-pr-labels: awaiting-approval
-        close-issue-reason: not_planned
-        
+      - uses: actions/stale@99b6c709598e2b0d0841cd037aaf1ba07a4410bd # v5.2.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-stale: 90
+          days-before-close: 5
+          stale-issue-message: "This issue is stale because it has been open 90 days with no activity. Remove stale label or comment or this will be closed in 5 days."
+          stale-issue-label: "no-issue-activity"
+          exempt-issue-labels: awaiting-approval
+          stale-pr-message: "This pull request is stale because it has been open 90 days with no activity. Remove stale label or comment or this will be closed in 5 days."
+          stale-pr-label: "no-pr-activity"
+          exempt-pr-labels: awaiting-approval
+          close-issue-reason: not_planned

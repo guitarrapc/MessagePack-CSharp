@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
   push:
     branches:
-    - master
-    - develop
+      - master
+      - develop
   pull_request:
     branches:
-    - master
-    - develop
+      - master
+      - develop
 
 env:
   BUILD_CONFIG: Debug
@@ -17,48 +17,51 @@ env:
 jobs:
   unity:
     if: ${{ ((github.event_name == 'push' && github.repository_owner == 'MessagePack-CSharp') || startsWith(github.event.pull_request.head.label, 'MessagePack-CSharp:')) && github.triggering_actor != 'dependabot[bot]' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     timeout-minutes: 15
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
-    - uses: ./.github/actions/setup-dotnet
-    - run: dotnet build -c ${{ env.BUILD_CONFIG }} # require dotnet build (Debug) before Unity build.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+      - uses: ./.github/actions/setup-dotnet
+      - run: dotnet build -c ${BUILD_CONFIG} # require dotnet build (Debug) before Unity build.
 
-    - name: restore and run local tool for NuGetForUnity
-      working-directory: ./src/MessagePack.UnityClient
-      run: |
-        dotnet tool restore
-        dotnet nugetforunity restore
+      - name: restore and run local tool for NuGetForUnity
+        working-directory: ./src/MessagePack.UnityClient
+        run: |
+          dotnet tool restore
+          dotnet nugetforunity restore
 
-    # Run UnitTest
-    - uses: actions/cache@v4
-      with:
-        path: src/MessagePack.UnityClient/Library
-        key: Library-MessagePack-StandaloneLinux64
-        restore-keys: |
-          Library-MessagePack-
-          Library-
-    - name: Build project
-      uses: game-ci/unity-builder@v4
-      env:
-        UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-        UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-        UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-      with:
-        projectPath: src/MessagePack.UnityClient
-        unityVersion: 2022.3.12f1
-        targetPlatform: StandaloneLinux64
-        buildMethod: UnitTestBuilder.BuildUnitTest
-        versioning: None
-        customParameters: "/headless /ScriptBackend IL2CPP"
-    - name: Check UnitTest file is generated
-      run: ls -lR ./src/MessagePack.UnityClient/bin/UnitTest
-    - name: Execute UnitTest
-      run: ./src/MessagePack.UnityClient/bin/UnitTest/StandaloneLinux64_IL2CPP/test
+      # Run UnitTest
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: src/MessagePack.UnityClient/Library
+          key: Library-MessagePack-StandaloneLinux64
+          restore-keys: |
+            Library-MessagePack-
+            Library-
+      - name: Build project
+        uses: game-ci/unity-builder@adaf7cd8f42fd48fbbf2d4f5f67ca30d87f819f1 # v5.0.1
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: src/MessagePack.UnityClient
+          unityVersion: 2022.3.12f1
+          targetPlatform: StandaloneLinux64
+          buildMethod: UnitTestBuilder.BuildUnitTest
+          versioning: None
+          customParameters: "/headless /ScriptBackend IL2CPP"
+      - name: Check UnitTest file is generated
+        run: ls -lR ./src/MessagePack.UnityClient/bin/UnitTest
+      - name: Execute UnitTest
+        run: ./src/MessagePack.UnityClient/bin/UnitTest/StandaloneLinux64_IL2CPP/test
 
-    # check meta files
-    - uses: ./.github/actions/check-metas
-      with:
-        directory: src/MessagePack.UnityClient
+      # check meta files
+      - uses: ./.github/actions/check-metas
+        with:
+          directory: src/MessagePack.UnityClient

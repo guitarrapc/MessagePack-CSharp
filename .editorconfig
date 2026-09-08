@@ -9,7 +9,7 @@ indent_style = space
 
 # (Please don't specify an indent_size here; that has too many unintended consequences.)
 
-[*.yml]
+[*.{yaml,yml}]
 indent_size = 2
 indent_style = space
 
