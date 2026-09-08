@@ -77,9 +77,10 @@ jobs:
 
   # delete dry-run created git branch
   cleanup:
-    if: ${{ needs.update-packagejson.outputs.is-branch-created == 'true' }}
+    if: ${{ always() && needs.update-packagejson.outputs.is-branch-created == 'true' }}
     needs: [update-packagejson, create-release]
     uses: ./.github/workflows/_clean-packagejson-branch.yaml
-    permissions: {}
+    permissions:
+      contents: write
     with:
       branch: ${{ needs.update-packagejson.outputs.branch-name }}
